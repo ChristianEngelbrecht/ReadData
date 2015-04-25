@@ -1,0 +1,11 @@
+{
+  "config":{
+    "Port_Of_Hosts": [
+      {
+        "name":"host1",
+        "port":1234,
+        "reachable":false
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "config":{
+    "Port_Of_Hosts": [
+      {
+        "name":"host1",
+        "port":1234,
+        "reachable":true,
+        "initialize":false,
+        "remoteAddress":"host1"
+      },
+      {
+        "name":"host2",
+        "port":2345,
+        "reachable":true,
+        "initialize":false,
+        "remoteAddress":"host2"
+      },
+      {
+        "name":"host3",
+        "port":3456,
+        "reachable":true,
+        "initialize":false,
+        "remoteAddress":"host3"
+      }
+    ],
+    "documentPath":"C:\\Users\\XinXin\\Documents\\vertx-maven-master\\BigData_MasterThesis\\src\\main\\resources\\source\\06622226.pdf"
+  }
+}
