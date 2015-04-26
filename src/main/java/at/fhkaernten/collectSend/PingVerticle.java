@@ -5,16 +5,12 @@ import org.vertx.java.core.AsyncResultHandler;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.eventbus.EventBus;
-import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.core.net.NetClient;
-import org.vertx.java.core.net.NetServer;
 import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.platform.Verticle;
-
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -42,13 +38,11 @@ public class PingVerticle extends Verticle{
             public void handle(Long event) {
             // Dieser NetServer pingt am Anfang alle Hosts.
             client = vertx.createNetClient();
-            //connection timeout = 5 seconds
-            //client.setConnectTimeout(1000*5);
             for (Object host : arrayOfPorts) {
                 final int port = ((JsonObject) host).getInteger("port");
                 final String name = ((JsonObject) host).getString("name");
                 client.connect(port, "localhost", new AsyncResultHandler<NetSocket>() {
-                    //Event.Succeeded trifft dann zu, wenn sich der Client erfolgreich mit dem MapReduce Modul verbinden konntte
+                    //Event.Succeeded trifft dann zu, wenn sich der Client erfolgreich mit dem MapReduce Modul verbinden konnte
                     // Erst wenn ein Event zutrifft, springt der Handler an und reagiert
                     // Es trifft immer ein Event ein (false oder true) -> Bei true wird wieder ein neuer Socket mitgegeben!
                     @Override
@@ -72,7 +66,7 @@ public class PingVerticle extends Verticle{
                             }
                         });
                         // now send some data
-                        log.info(String.format("Ping %s @Port %s", name, port));
+                        log.info("Ping " + name + "@Port " + port);
                         socket.write(new Buffer("ping"));
                     }
                     }
@@ -84,8 +78,8 @@ public class PingVerticle extends Verticle{
     }
     //overwrite shared map
     private void setSharedMap(){
-        for (Object obj : arrayOfPorts){
-            String hostName = ((JsonObject) obj).getString("name");
+                for (Object obj : arrayOfPorts){
+                    String hostName = ((JsonObject) obj).getString("name");
             sharedMap.put(hostName, ((JsonObject) obj).encode());
         }
     }

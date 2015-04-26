@@ -9,7 +9,6 @@ import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.core.net.NetClient;
-import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.platform.Verticle;
 
 import java.util.HashMap;
@@ -36,10 +35,10 @@ public class CollectSend extends Verticle {
         arrayOfPorts = container.config().getArray("Port_Of_Hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
         client = vertx.createNetClient();
-        deploymentMap = new HashMap<>();
+        deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
 
         //warte alle reply ping ab (1 Sekunde)
-        vertx.setTimer(1, new Handler<Long>() {
+        vertx.setTimer(1000, new Handler<Long>() {
             @Override
             public void handle(Long event) {
                 bus.send("start.reading.data", "start");
@@ -66,7 +65,7 @@ public class CollectSend extends Verticle {
                             setSharedMap();
                             final String remoteAddress = ((JsonObject)obj).getString("remoteAddress");
                             container.deployVerticle("at.fhkaernten.collectSend.ReceiveData", new JsonObject("{\"port\":" + ((JsonObject)obj).getInteger("port") + "," +
-                                            "\"remoteAddress\":\"" + remoteAddress + "\"}"),
+                                                                                                            "\"remoteAddress\":\"" + remoteAddress + "\"}"),
                                     new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
                                         @Override
                                         public void handle(AsyncResult<String> asyncResult) {
@@ -105,25 +104,6 @@ public class CollectSend extends Verticle {
             //
             public void handle(Message<String> message) {
                 System.out.println("Finish");
-            }
-        });
-    }
-
-    private void writeToSocket(int portNumber, final String charBuffer){
-        client.connect(++portNumber, "localhost", new Handler<AsyncResult<NetSocket>>() {
-            @Override
-            public void handle(AsyncResult<NetSocket> event) {
-                event.result().exceptionHandler(new Handler<Throwable>() {
-                    @Override
-                    public void handle(Throwable throwable) {
-                        log.error("Connection could not be established to " + container.config().getString("name") + " with  " + container.config().getInteger("port"));
-                    }
-                });
-                if (event.succeeded()) {
-                    log.info("Connected to host " + container.config().getString("name") + " with " + container.config().getInteger("port") + " and ready to send data.");
-                    event.result().write(charBuffer);
-                    //event.result().close();
-                }
             }
         });
     }

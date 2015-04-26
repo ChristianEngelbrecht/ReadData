@@ -2,13 +2,10 @@ package at.fhkaernten.source;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.util.PDFTextStripper;
-import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.net.NetClient;
-import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.platform.Verticle;
 
 /**
@@ -23,7 +20,7 @@ public class ReadText extends Verticle {
     @Override
     public void start(){
         bus = vertx.eventBus();
-        count = 0;
+        count = 0; // Anzahl an Characters die eingelesen werden -> Davon hängt die Datengröße dann ab
         bus.registerHandler("start.reading.data", new Handler<Message>() {
             @Override
             public void handle(Message event) {
@@ -34,17 +31,6 @@ public class ReadText extends Verticle {
                 PDFTextStripper stripper = new PDFTextStripper();  // Hilfsklasse der Klasse PDFTextStripper, welche das Einlesen der PDF durchführt
                 text = stripper.getText(document); // Hier wird die Methode getText der Klasse PDFTextStripper aufgerufen welche den Text der Datei als String zurückgibt
                 bus.send("splitData.address", text.substring(count, ++count*1));
-                /**for (int i = 0; i < 5; i++) {
-                    for (int j = 0; j < text.length(); j++) {
-                        if (!text.isEmpty()) {
-                            // Sende Character an der Position j an den Event Bus mit der Adresse splitData.address
-                            bus.send("splitData.address", text.charAt(j));
-                        } else {
-                            break;
-                        }
-                    }
-                }**/
-
                 bus.send("splitData.finish", "finish"); // Sendet finish an Adresse splitData.finish sobald der Text 120 mal eingelesen wurde
                 container.logger().info("Data has been processed");
             } catch (Exception e) {
@@ -57,7 +43,7 @@ public class ReadText extends Verticle {
             @Override
             public void handle(Message<String> message) {
                 try {
-                    bus.send("splitData.address", text.substring(count * 1, ++count * 1));
+                    bus.send("splitData.address", text.substring(count * 16000, ++count * 1)); // Holt sich einen Teil vom gesamten String
                 } catch (Exception e){
                     bus.send("splitData.address", text.substring(--count * 1, text.length()-1));
                 }

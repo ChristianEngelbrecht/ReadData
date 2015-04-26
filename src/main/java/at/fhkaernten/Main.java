@@ -2,7 +2,6 @@ package at.fhkaernten;
 /*
  *
  */
-
 import org.apache.commons.io.IOUtils;
 import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.AsyncResultHandler;
@@ -10,7 +9,6 @@ import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.platform.Verticle;
 import java.io.IOException;
 import java.io.InputStream;
-
 
 /*
 Aufruf von Main wird über die Datei mod.json deklariert -> Ist der Startpunkt des Programmes.
@@ -23,28 +21,8 @@ public class Main extends Verticle {
         deployVerticle("at.fhkaernten.source.ReadText"); // Hier wird die Methode deployVerticle aufgerufen
         deployVerticle("at.fhkaernten.collectSend.PingVerticle");
         deployVerticle("at.fhkaernten.collectSend.CollectSend");
-        //deployVerticle("at.fhkaernten.mapreduce.MapReduce"); -> todo: Delete
-
     }
 
-    private void deployWorkerVerticle(final String classname) {
-        try {
-            container.deployWorkerVerticle(
-                    classname,
-                    getConfigs(classname),
-                    1,
-                    false,
-                    new AsyncResultHandler<String>() {
-                        @Override
-                        public void handle(AsyncResult<String> asyncResult) {
-                            container.logger().info(String.format("Verticle %s has been deployed.", classname));
-                        } // handle
-                    } // handler
-            );
-        } catch (Exception e) {
-            container.logger().error("Failed to deploy "+classname, e);
-        }
-    } // deployVerticle
     private void deployVerticle(final String classname) {
         try {
             container.deployVerticle( //Container beinhaltet alle Threads in VertX

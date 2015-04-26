@@ -4,21 +4,21 @@
       {
         "name":"host1",
         "port":1234,
-        "reachable":true,
+        "reachable":false,
         "initialize":false,
         "remoteAddress":"host1"
       },
       {
         "name":"host2",
         "port":2345,
-        "reachable":true,
+        "reachable":false,
         "initialize":false,
         "remoteAddress":"host2"
       },
       {
         "name":"host3",
         "port":3456,
-        "reachable":true,
+        "reachable":false,
         "initialize":false,
         "remoteAddress":"host3"
       }
