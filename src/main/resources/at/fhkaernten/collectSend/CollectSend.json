@@ -1,6 +1,6 @@
 {
   "config":{
-    "Port_Of_Hosts": [
+    "port_Of_Hosts": [
       {
         "name":"host1",
         "port":1234,
@@ -22,7 +22,6 @@
         "initialize":false,
         "remoteAddress":"host3"
       }
-    ],
-    "documentPath":"C:\\Users\\XinXin\\Documents\\vertx-maven-master\\BigData_MasterThesis\\src\\main\\resources\\source\\06622226.pdf"
+    ]
   }
 }

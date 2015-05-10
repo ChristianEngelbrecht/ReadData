@@ -27,7 +27,7 @@ public class ReceiveData extends Verticle {
         log = container.logger();
         bus = vertx.eventBus();
         portNumber = container.config().getInteger("port");
-        client = vertx.createNetClient();
+        client = vertx.createNetClient().setSendBufferSize(1024*1024*8);
         bus.registerHandler(container.config().getString("remoteAddress"), new Handler<Message<String>>() {
             @Override
             public void handle(final Message<String> message) {
@@ -36,7 +36,7 @@ public class ReceiveData extends Verticle {
                     public void handle(AsyncResult<NetSocket> event) {
                         if (event.succeeded()) {
                             log.info("Connected to host " + container.config().getString("name") + " with " + container.config().getInteger("port") + " and ready to send data.");
-                            event.result().write(message.body());
+                            event.result().write(message.body() + "$END$");
                             event.result().close();
                             bus.send("finish", container.config().getString("remoteAddress"));
                         }

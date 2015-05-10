@@ -22,20 +22,26 @@ public class CollectSend extends Verticle {
     private EventBus bus;
     private Logger log;
     private NetClient client;
-    private StringBuilder batchString;
     private JsonArray arrayOfPorts;
     private ConcurrentMap<String, String> sharedMap;
     private Map<String, String> deploymentMap;
+    private String readTextAddress;
     @Override
     public void start(){
 
         bus = vertx.eventBus();
         log = container.logger();
-        batchString = new StringBuilder();
-        arrayOfPorts = container.config().getArray("Port_Of_Hosts");
+        arrayOfPorts = container.config().getArray("port_Of_Hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
         client = vertx.createNetClient();
         deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
+
+        bus.registerHandler("initial.address", new Handler<Message<String>>() {
+                    @Override
+                    public void handle(Message<String> event) {
+                       readTextAddress = event.body();
+                    }
+         });
 
         //warte alle reply ping ab (1 Sekunde)
         vertx.setTimer(1000, new Handler<Long>() {
@@ -52,7 +58,6 @@ public class CollectSend extends Verticle {
                 //batchString.append(message.body()); // Body = <Character> in Zeile 64
                 //if (batchString.length() >= 160 / 2) {
                     final String charBuffer = message.body();
-                    batchString.setLength(0);
                     //Start Timer
                     //vertx.setPeriodic(1000 * 2, new Handler<Long>() {
                     //@Override public void handle(Long event) {
@@ -72,7 +77,7 @@ public class CollectSend extends Verticle {
                                             if(asyncResult.succeeded()){
                                                 deploymentMap.put(remoteAddress, asyncResult.result());
                                                 bus.send(remoteAddress, charBuffer);
-                                                bus.send("keep.reading", "continue reading");
+                                                bus.send(readTextAddress, "continue reading");
                                             }
 
                                         } // handle
@@ -95,8 +100,10 @@ public class CollectSend extends Verticle {
         bus.registerHandler("finish", new Handler<Message<String>>() {
             @Override
             public void handle(Message<String> message) {
-                container.undeployVerticle(deploymentMap.get(message.body()));
-                deploymentMap.remove(message.body());
+                try{
+                    container.undeployVerticle(deploymentMap.get(message.body()));
+                    deploymentMap.remove(message.body());
+                }catch(Exception e){}
             }
         });
         bus.registerHandler("splitData.finish", new Handler<Message<String>>() {

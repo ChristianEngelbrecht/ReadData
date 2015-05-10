@@ -27,13 +27,13 @@ public class PingVerticle extends Verticle{
     public void start(){
         log = container.logger();
         bus = vertx.eventBus();
-        arrayOfPorts =  container.config().getArray("Port_Of_Hosts");
+        arrayOfPorts =  container.config().getArray("port_Of_Hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
         //initialize shared Map
         setSharedMap();
 
 
-        vertx.setPeriodic(1000 * 2, new Handler<Long>() {
+        vertx.setPeriodic(1000 * 10, new Handler<Long>() {
             @Override
             public void handle(Long event) {
             // Dieser NetServer pingt am Anfang alle Hosts.
