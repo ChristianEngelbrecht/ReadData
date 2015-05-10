@@ -9,6 +9,7 @@ import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.core.net.NetClient;
+import org.vertx.java.core.net.NetServer;
 import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.platform.Verticle;
 import java.util.concurrent.ConcurrentMap;
@@ -36,46 +37,71 @@ public class PingVerticle extends Verticle{
         vertx.setPeriodic(1000 * 10, new Handler<Long>() {
             @Override
             public void handle(Long event) {
-            // Dieser NetServer pingt am Anfang alle Hosts.
-            client = vertx.createNetClient();
-            for (Object host : arrayOfPorts) {
-                final int port = ((JsonObject) host).getInteger("port");
-                final String name = ((JsonObject) host).getString("name");
-                client.connect(port, "localhost", new AsyncResultHandler<NetSocket>() {
-                    //Event.Succeeded trifft dann zu, wenn sich der Client erfolgreich mit dem MapReduce Modul verbinden konnte
-                    // Erst wenn ein Event zutrifft, springt der Handler an und reagiert
-                    // Es trifft immer ein Event ein (false oder true) -> Bei true wird wieder ein neuer Socket mitgegeben!
-                    @Override
-                    public void handle(AsyncResult<NetSocket> event) {
-                    if (event.succeeded()) {
-                        final NetSocket socket = event.result();
-                        socket.dataHandler(new Handler<Buffer>() {
-                            @Override
-                            public void handle(Buffer buffer) { // Hier wird die Portnummer des freien Hosts ausgelesen
-                                System.out.print(buffer.toString());
-                            for (Object obj : arrayOfPorts) {
-                                int portTmp = ((JsonObject) obj).getInteger("port");
-                                if (portTmp == Integer.valueOf(buffer.toString())) {
-                                    ((JsonObject) obj).putBoolean("reachable", true);
-                                    setSharedMap();
-                                    log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
-                                    socket.close();
-                                    break;
-                                }
+                // Dieser NetServer pingt am Anfang alle Hosts.
+                client = vertx.createNetClient();
+                for (Object host : arrayOfPorts) {
+                    final int port = ((JsonObject) host).getInteger("port");
+                    final String name = ((JsonObject) host).getString("name");
+                    client.connect(port, "localhost", new AsyncResultHandler<NetSocket>() {
+                        //Event.Succeeded trifft dann zu, wenn sich der Client erfolgreich mit dem MapReduce Modul verbinden konnte
+                        // Erst wenn ein Event zutrifft, springt der Handler an und reagiert
+                        // Es trifft immer ein Event ein (false oder true) -> Bei true wird wieder ein neuer Socket mitgegeben!
+                        @Override
+                        public void handle(AsyncResult<NetSocket> event) {
+                            if (event.succeeded()) {
+                                final NetSocket socket = event.result();
+                                socket.dataHandler(new Handler<Buffer>() {
+                                    @Override
+                                    public void handle(Buffer buffer) { // Hier wird die Portnummer des freien Hosts ausgelesen
+                                        System.out.print(buffer.toString());
+                                        for (Object obj : arrayOfPorts) {
+                                            int portTmp = ((JsonObject) obj).getInteger("port");
+                                            if (portTmp == Integer.valueOf(buffer.toString())) {
+                                                ((JsonObject) obj).putBoolean("reachable", true);
+                                                setSharedMap();
+                                                log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
+                                                socket.close();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                });
+                                // now send some data
+                                log.info("Ping " + name + "@Port " + port);
+                                socket.write(new Buffer("ping"));
                             }
-                            }
-                        });
-                        // now send some data
-                        log.info("Ping " + name + "@Port " + port);
-                        socket.write(new Buffer("ping"));
-                    }
-                    }
-                });
-            }
+                        }
+                    });
+                }
             }
         });
 
+        NetServer server = vertx.createNetServer();
+        server.connectHandler(new Handler<NetSocket>() {
+            @Override
+            public void handle(NetSocket event){
+                final NetSocket socket = event;
+                socket.dataHandler(new Handler<Buffer>() {
+                    @Override
+                    public void handle(Buffer buffer) {
+                        for (Object obj : arrayOfPorts) {
+                            int portTmp = ((JsonObject) obj).getInteger("port");
+                            if (portTmp == Integer.valueOf(buffer.toString())) {
+                                ((JsonObject) obj).putBoolean("reachable", true);
+                                setSharedMap();
+                                log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
+                                socket.close();
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+        }).listen(667);
+
     }
+
+
     //overwrite shared map
     private void setSharedMap(){
                 for (Object obj : arrayOfPorts){
