@@ -20,12 +20,13 @@ public class ReadText extends Verticle {
     private String text;
     private StringBuilder bigData;
     int remaining = 0;
+    int size = 8377236;
     @Override
     public void start(){
         bus = vertx.eventBus();
         log = container.logger();
         bigData = new StringBuilder();
-        count = 0; // Anzahl wie oft pdf eingelesen wird
+        count = 0; // Anzahl wie oft eingelesen wird
         countData = 0; // Anzahl an Characters/words die eingelesen werden -> Davon hängt die Datengröße dann ab
         bus.registerHandler("start.reading.data", new Handler<Message>() {
             @Override
@@ -48,6 +49,7 @@ public class ReadText extends Verticle {
         });
 
         bus.registerHandler("keep.reading.char", new Handler<Message<String>>() {
+
             @Override
             public void handle(Message<String> message) {
                 bigData.setLength(0);
@@ -56,11 +58,11 @@ public class ReadText extends Verticle {
                 }
                 try {
                     //8377236 = 16MB
-                    for (int i=0; i<(8377236-remaining)/text.length(); i++){
+                    for (int i=0; i<(size-remaining)/text.length(); i++){
                         bigData.append(text);
                     }
-                    bigData.append(text.substring(0, (8377236-remaining)%33243));
-                    remaining = 33243 - (8377236-remaining)%33243;
+                    bigData.append(text.substring(0, (size-remaining)%text.length()));
+                    remaining = text.length() - (size-remaining)%text.length();
                     bus.send("splitData.address", bigData.toString()); // Holt sich einen Teil vom gesamten String
                 } catch (Exception e){
                     int remainingChar = countData=-15;
@@ -90,24 +92,28 @@ public class ReadText extends Verticle {
                 }
                 try {
                     //8377236 = 16MB
-                    for (int i=0; i<(8377236-remaining)/text.length(); i++){
+                    System.out.println((size-remaining)/text.length());
+                    //hänge text als ganzes so lange an, bis die größe fast erreicht ist
+                    for (int i=0; i<(size-remaining)/text.length(); i++){
                         bigData.append(text);
                     }
-                    bigData.append(text.substring(0, (8377236-remaining)%33243));
-                    remaining = 33243 - (8377236-remaining)%33243;
-
+                    //errechne durch modulo wieviel text genau zu z.B. 8mb fehlen
+                    bigData.append(text.substring(0, (size-remaining)%text.length()));
+                    remaining = text.length() - (size-remaining)%text.length();
+                    //prüfe ob zufällig die letzen buchstaben ein wort abschließen
                     if (bigData.toString().charAt(bigData.length()-1) == ' '){
                         bus.send("splitData.address", bigData.toString());
                     } else {
                         --remaining;
+                        //hänge solange einen Buchstaben an, bis ein ganzes Wort bigData abschließt
                         while(true){
-                            if (text.charAt(33243-remaining) == ' '){
+                            if (text.charAt(text.length()-remaining) == ' '){
                                 bus.send("splitData.address", bigData.toString());
-                                log.info("dhksa");
+                                log.info("Size of bigData reached.");
                                 break;
 
                             } else {
-                                bigData.append(text.charAt(33243-remaining));
+                                bigData.append(text.charAt(text.length()-remaining));
                                 remaining--;
                             }
                         }

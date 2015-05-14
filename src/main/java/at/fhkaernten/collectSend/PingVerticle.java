@@ -22,6 +22,8 @@ public class PingVerticle extends Verticle{
     private EventBus bus;
     private NetClient client;
     private JsonArray arrayOfPorts;
+    private NetSocket socketToClose;
+    private NetServer server;
     //shared Data
     private ConcurrentMap<String, String> sharedMap;
     @Override
@@ -34,9 +36,10 @@ public class PingVerticle extends Verticle{
         setSharedMap();
 
 
-        vertx.setPeriodic(1000 * 10, new Handler<Long>() {
+        vertx.setPeriodic(1000 * 5, new Handler<Long>() {
             @Override
             public void handle(Long event) {
+                System.out.println(Thread.currentThread().getName());
                 // Dieser NetServer pingt am Anfang alle Hosts.
                 client = vertx.createNetClient();
                 for (Object host : arrayOfPorts) {
@@ -49,6 +52,7 @@ public class PingVerticle extends Verticle{
                         @Override
                         public void handle(AsyncResult<NetSocket> event) {
                             if (event.succeeded()) {
+                                socketToClose = event.result();
                                 final NetSocket socket = event.result();
                                 socket.dataHandler(new Handler<Buffer>() {
                                     @Override
@@ -67,7 +71,7 @@ public class PingVerticle extends Verticle{
                                     }
                                 });
                                 // now send some data
-                                log.info("Ping " + name + "@Port " + port);
+                                //log.info("Ping " + name + "@Port " + port);
                                 socket.write(new Buffer("ping"));
                             }
                         }
@@ -76,7 +80,7 @@ public class PingVerticle extends Verticle{
             }
         });
 
-        NetServer server = vertx.createNetServer();
+        server = vertx.createNetServer();
         server.connectHandler(new Handler<NetSocket>() {
             @Override
             public void handle(NetSocket event){
@@ -89,7 +93,7 @@ public class PingVerticle extends Verticle{
                             if (portTmp == Integer.valueOf(buffer.toString())) {
                                 ((JsonObject) obj).putBoolean("reachable", true);
                                 setSharedMap();
-                                log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
+                                //log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
                                 socket.close();
                                 break;
                             }
@@ -107,6 +111,25 @@ public class PingVerticle extends Verticle{
                 for (Object obj : arrayOfPorts){
                     String hostName = ((JsonObject) obj).getString("name");
             sharedMap.put(hostName, ((JsonObject) obj).encode());
+        }
+    }
+
+    @Override
+    public void stop(){
+        if (socketToClose != null){
+            try{
+                socketToClose.close();
+            } catch (Exception e){}
+        } else {
+            log.info("Stopping ReduceSend-Verticle.");
+        }
+        try {
+            try {
+                server.close();
+            }catch(Exception e){}
+            client.close();
+        } finally {
+            log.info("Stopping ReduceSend-Verticle.");
         }
     }
 }

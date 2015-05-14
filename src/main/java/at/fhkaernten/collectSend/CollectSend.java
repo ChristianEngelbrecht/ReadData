@@ -8,7 +8,7 @@ import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.net.NetClient;
+import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.platform.Verticle;
 
 import java.util.HashMap;
@@ -21,11 +21,11 @@ import java.util.concurrent.ConcurrentMap;
 public class CollectSend extends Verticle {
     private EventBus bus;
     private Logger log;
-    private NetClient client;
     private JsonArray arrayOfPorts;
     private ConcurrentMap<String, String> sharedMap;
     private Map<String, String> deploymentMap;
     private String readTextAddress;
+    private int check = 0;
     @Override
     public void start(){
 
@@ -33,7 +33,6 @@ public class CollectSend extends Verticle {
         log = container.logger();
         arrayOfPorts = container.config().getArray("port_Of_Hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
-        client = vertx.createNetClient();
         deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
 
         bus.registerHandler("initial.address", new Handler<Message<String>>() {
@@ -69,21 +68,26 @@ public class CollectSend extends Verticle {
                             ((JsonObject)obj).putBoolean("reachable", false);
                             setSharedMap();
                             final String remoteAddress = ((JsonObject)obj).getString("remoteAddress");
-                            container.deployVerticle("at.fhkaernten.collectSend.ReceiveData", new JsonObject("{\"port\":" + ((JsonObject)obj).getInteger("port") + "," +
-                                                                                                            "\"remoteAddress\":\"" + remoteAddress + "\"}"),
-                                    new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
-                                        @Override
-                                        public void handle(AsyncResult<String> asyncResult) {
-                                            if(asyncResult.succeeded()){
-                                                deploymentMap.put(remoteAddress, asyncResult.result());
-                                                bus.send(remoteAddress, charBuffer);
-                                                bus.send(readTextAddress, "continue reading");
-                                            }
+                            if (deploymentMap.get(remoteAddress) != null){
+                                bus.send(remoteAddress, charBuffer);
+                                bus.send(readTextAddress, "continue reading");
+                            }else {
+                                container.deployWorkerVerticle("at.fhkaernten.collectSend.ReceiveData", new JsonObject("{\"port\":" + ((JsonObject) obj).getInteger("port") + "," +
+                                                "\"remoteAddress\":\"" + remoteAddress + "\"}"), 1, false,
+                                        new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
+                                            @Override
+                                            public void handle(AsyncResult<String> asyncResult) {
+                                                if (asyncResult.succeeded()) {
+                                                    deploymentMap.put(remoteAddress, asyncResult.result());
+                                                    //bus.send(remoteAddress, charBuffer);
+                                                    bus.send(remoteAddress, charBuffer);
+                                                    bus.send(readTextAddress, "continue reading");
+                                                }
 
-                                        } // handle
-                                    });
+                                            } // handle
+                                        });
 
-
+                            }
                             //writeToSocket(((JsonObject)obj).getInteger("port"), charBuffer);
                             break;
                         }
@@ -134,9 +138,6 @@ public class CollectSend extends Verticle {
             }
         }
     }
-    @Override
-    public void stop(){
-        client.close();
-    }
+
 }
 

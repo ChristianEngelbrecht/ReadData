@@ -20,7 +20,7 @@ public class Main extends Verticle {
   public void start() {
         deployVerticle("at.fhkaernten.source.ReadText"); // Hier wird die Methode deployVerticle aufgerufen
         deployVerticle("at.fhkaernten.collectSend.PingVerticle");
-        deployVerticle("at.fhkaernten.collectSend.CollectSend");
+        deployWorkerVerticle("at.fhkaernten.collectSend.CollectSend");
     }
 
     private void deployVerticle(final String classname) {
@@ -35,6 +35,25 @@ public class Main extends Verticle {
                             container.logger().info(String.format("Verticle %s has been deployed.", classname));
                         } // handle
                     } // handler
+            );
+        } catch (Exception e) {
+            container.logger().error("Failed to deploy "+classname, e);
+        }
+    } // deployVerticle
+
+    private void deployWorkerVerticle(final String classname) {
+        try {
+            container.deployWorkerVerticle( //Container beinhaltet alle Threads in VertX
+                    classname, // = "at.fhkaernten.source.ReadText" bzw. "at.fhkaernten.collectSend.CollectSend"
+                    getConfigs(classname), // Hier wird die Methode getConfigs aufgerufen und die JSON Konfigurationsdatei zurückgegeben
+                    1, // Anzahl an gleichzeitigen Verticles
+                    false,
+                    new AsyncResultHandler<String>() {
+                        @Override
+                        public void handle(AsyncResult<String> event) {
+                            container.logger().info(String.format("Verticle %s has been deployed.", classname));
+                        }
+                    }
             );
         } catch (Exception e) {
             container.logger().error("Failed to deploy "+classname, e);
