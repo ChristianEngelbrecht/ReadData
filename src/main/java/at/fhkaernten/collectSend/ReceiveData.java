@@ -21,30 +21,36 @@ public class ReceiveData extends Verticle {
     private NetClient client;
     private Logger log;
     private int portNumber;
+    private String ip;
     private NetSocket socketToClose;
+    private String host;
     private int check;
+    private String remoteAddress;
 
     @Override
     public void start(){
         log = container.logger();
         bus = vertx.eventBus();
         portNumber = container.config().getInteger("port");
+        ip = container.config().getString("ip");
+        host = container.config().getString("name");
+        remoteAddress = container.config().getString("remoteAddress");
+
         portNumber++;
-        client = vertx.createNetClient().setSendBufferSize(1024 * 1024 * 8);
-        bus.registerHandler(container.config().getString("remoteAddress"), new Handler<Message<String>>() {
+
+        client = vertx.createNetClient();
+        bus.registerHandler(remoteAddress, new Handler<Message<String>>() {
             @Override
             public void handle(final Message<String> message) {
-                client.connect(portNumber, "localhost", new Handler<AsyncResult<NetSocket>>() {
+                client.connect(portNumber, ip , new Handler<AsyncResult<NetSocket>>() {
                     @Override
                     public void handle(AsyncResult<NetSocket> event) {
-                        System.out.println(Thread.currentThread().getName());
                         if (event.succeeded()) {
                             socketToClose = event.result();
-                            log.info("Connected to host " + container.config().getString("name") + " with " + container.config().getInteger("port") + " and ready to send data.");
+                            log.info("Connected to host " + host + " with " + portNumber + " and ready to send data.");
                             log.info(++check);
-                            event.result().write(message.body() + "$END$");
+                            event.result().write(message.body() + "#START##SOURCE#" + remoteAddress + "#TIME#" + System.currentTimeMillis() + "#END#");
                             event.result().close();
-                            //bus.send("finish", container.config().getString("remoteAddress"));
                         }
                     }
                 });
@@ -61,12 +67,12 @@ public class ReceiveData extends Verticle {
 
             }
         } else {
-            log.info("Stopping ReduceSend-Verticle.");
+            log.info("Stopping ReceiveData-Verticle.");
         }
         try {
             client.close();
         } finally {
-            log.info("Stopping ReduceSend-Verticle.");
+            log.info("Stopping ReceiveData-Verticle.");
         }
     }
 }

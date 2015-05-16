@@ -1,9 +1,10 @@
 {
   "config":{
-    "port_Of_Hosts": [
+    "port_of_hosts": [
       {
         "name":"host1",
         "port":1234,
+        "ip":"localhost",
         "reachable":false,
         "initialize":false,
         "remoteAddress":"host1"
@@ -11,6 +12,7 @@
       {
         "name":"host2",
         "port":2345,
+        "ip":"localhost",
         "reachable":false,
         "initialize":false,
         "remoteAddress":"host2"
@@ -18,6 +20,7 @@
       {
         "name":"host3",
         "port":3456,
+        "ip":"localhost",
         "reachable":false,
         "initialize":false,
         "remoteAddress":"host3"

@@ -30,7 +30,7 @@ public class PingVerticle extends Verticle{
     public void start(){
         log = container.logger();
         bus = vertx.eventBus();
-        arrayOfPorts =  container.config().getArray("port_Of_Hosts");
+        arrayOfPorts =  container.config().getArray("port_of_hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
         //initialize shared Map
         setSharedMap();
@@ -39,13 +39,13 @@ public class PingVerticle extends Verticle{
         vertx.setPeriodic(1000 * 5, new Handler<Long>() {
             @Override
             public void handle(Long event) {
-                System.out.println(Thread.currentThread().getName());
                 // Dieser NetServer pingt am Anfang alle Hosts.
                 client = vertx.createNetClient();
                 for (Object host : arrayOfPorts) {
                     final int port = ((JsonObject) host).getInteger("port");
-                    final String name = ((JsonObject) host).getString("name");
-                    client.connect(port, "localhost", new AsyncResultHandler<NetSocket>() {
+                    final String ip = ((JsonObject) host).getString("ip");
+
+                    client.connect(port, ip , new AsyncResultHandler<NetSocket>() {
                         //Event.Succeeded trifft dann zu, wenn sich der Client erfolgreich mit dem MapReduce Modul verbinden konnte
                         // Erst wenn ein Event zutrifft, springt der Handler an und reagiert
                         // Es trifft immer ein Event ein (false oder true) -> Bei true wird wieder ein neuer Socket mitgegeben!
@@ -71,7 +71,6 @@ public class PingVerticle extends Verticle{
                                     }
                                 });
                                 // now send some data
-                                //log.info("Ping " + name + "@Port " + port);
                                 socket.write(new Buffer("ping"));
                             }
                         }

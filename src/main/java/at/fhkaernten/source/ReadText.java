@@ -20,14 +20,11 @@ public class ReadText extends Verticle {
     private String text;
     private StringBuilder bigData;
     int remaining = 0;
-    int size = 8377236;
+    int size;
+
     @Override
     public void start(){
-        bus = vertx.eventBus();
-        log = container.logger();
-        bigData = new StringBuilder();
-        count = 0; // Anzahl wie oft eingelesen wird
-        countData = 0; // Anzahl an Characters/words die eingelesen werden -> Davon hängt die Datengröße dann ab
+        initialize(); // Initialisieren von Variablen
         bus.registerHandler("start.reading.data", new Handler<Message>() {
             @Override
             public void handle(Message event) {
@@ -123,5 +120,14 @@ public class ReadText extends Verticle {
                 }
             }
         });
+    }
+
+    private void initialize(){
+        bus = vertx.eventBus();
+        log = container.logger();
+        bigData = new StringBuilder();
+        size = container.config().getInteger("dataSize");
+        count = 0; // Anzahl wie oft eingelesen wird
+        countData = 0; // Anzahl an Characters/words die eingelesen werden -> Davon hängt die Datengröße dann ab
     }
 }

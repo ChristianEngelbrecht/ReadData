@@ -8,7 +8,6 @@ import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.logging.Logger;
-import org.vertx.java.core.net.NetSocket;
 import org.vertx.java.platform.Verticle;
 
 import java.util.HashMap;
@@ -31,7 +30,7 @@ public class CollectSend extends Verticle {
 
         bus = vertx.eventBus();
         log = container.logger();
-        arrayOfPorts = container.config().getArray("port_Of_Hosts");
+        arrayOfPorts = container.config().getArray("port_of_hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
         deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
 
@@ -72,7 +71,9 @@ public class CollectSend extends Verticle {
                                 bus.send(remoteAddress, charBuffer);
                                 bus.send(readTextAddress, "continue reading");
                             }else {
-                                container.deployWorkerVerticle("at.fhkaernten.collectSend.ReceiveData", new JsonObject("{\"port\":" + ((JsonObject) obj).getInteger("port") + "," +
+                                container.deployWorkerVerticle("at.fhkaernten.collectSend.ReceiveData",
+                                        new JsonObject("{\"port\":" + ((JsonObject) obj).getInteger("port") + "," +
+                                                "\"ip\":\"" + ((JsonObject) obj).getString("ip") + "\"," +
                                                 "\"remoteAddress\":\"" + remoteAddress + "\"}"), 1, false,
                                         new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
                                             @Override
@@ -100,8 +101,8 @@ public class CollectSend extends Verticle {
                 //}//if
             }//handle
         });
-
-        bus.registerHandler("finish", new Handler<Message<String>>() {
+        //TODO delete
+        /**bus.registerHandler("finish", new Handler<Message<String>>() {
             @Override
             public void handle(Message<String> message) {
                 try{
@@ -109,7 +110,7 @@ public class CollectSend extends Verticle {
                     deploymentMap.remove(message.body());
                 }catch(Exception e){}
             }
-        });
+        });**/
         bus.registerHandler("splitData.finish", new Handler<Message<String>>() {
             @Override
             //
