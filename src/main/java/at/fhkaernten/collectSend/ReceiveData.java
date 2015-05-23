@@ -29,14 +29,7 @@ public class ReceiveData extends Verticle {
 
     @Override
     public void start(){
-        log = container.logger();
-        bus = vertx.eventBus();
-        portNumber = container.config().getInteger("port");
-        ip = container.config().getString("ip");
-        host = container.config().getString("name");
-        remoteAddress = container.config().getString("remoteAddress");
-
-        portNumber++;
+        initialize();
 
         client = vertx.createNetClient();
         bus.registerHandler(remoteAddress, new Handler<Message<String>>() {
@@ -48,7 +41,6 @@ public class ReceiveData extends Verticle {
                         if (event.succeeded()) {
                             socketToClose = event.result();
                             log.info("Connected to host " + host + " with " + portNumber + " and ready to send data.");
-                            log.info(++check);
                             // Split string text from UUID and write UUID to log file (trace logging)
                             container.logger().trace("sendData:" + message.body().split("#ID#")[1] );
                             event.result().write(message.body() + "#SOURCE#" + remoteAddress + "#TIME#" + System.currentTimeMillis() + "#UUID#" + message.body().split("#ID#")[1] +  "#END#");
@@ -58,6 +50,16 @@ public class ReceiveData extends Verticle {
                 });
             }
         });
+    }
+
+    private void initialize(){
+        log = container.logger();
+        bus = vertx.eventBus();
+        portNumber = container.config().getInteger("port");
+        ip = container.config().getString("ip");
+        host = container.config().getString("name");
+        remoteAddress = container.config().getString("remoteAddress");
+        portNumber++;
     }
 
     @Override

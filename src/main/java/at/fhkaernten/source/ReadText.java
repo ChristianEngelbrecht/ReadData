@@ -17,56 +17,39 @@ import java.util.UUID;
 public class ReadText extends Verticle {
     private Logger log;
     private EventBus bus;
-    private int count;
     private int countData;
     private String text;
     private StringBuilder bigData;
-    int remaining = 0;
-    int size;
+    int remaining;
+    int count;
+    int packageSize;
+    int wholeSize;
+    int rounds;
 
     @Override
     public void start(){
         initialize(); // Initialisieren von Variablen
+        //calculate how many packages have to be sent to reach the whole data volume
+        calculateRounds();
         bus.registerHandler("start.reading.data", new Handler<Message>() {
             @Override
             public void handle(Message event) {
+                count ++;
+                if (count > rounds){
+                    bus.send("splitData.finish", "finish"); // Sendet finish an Adresse splitData.finish sobald der Text 120 mal eingelesen wurde
+                    container.logger().trace("end:finishing reading " + (wholeSize/packageSize)*packageSize);
+                    System.exit(0);
+                }
                 text = "";
                 try {
+                    //unique identifier
                     final String uuid = UUID.randomUUID().toString();
                     container.logger().trace("startReading:" + uuid);
                     text = readText();
                     bus.send(container.config().getString("address"), uuid);
-                    bus.send("splitData.finish", "finish"); // Sendet finish an Adresse splitData.finish sobald der Text 120 mal eingelesen wurde
                     container.logger().info("Data has been processed");
                 } catch (Exception e) {
                     container.logger().error("Reading the PDF File failed " + container.config().getString("documentPath") );
-                }
-            }
-        });
-
-        bus.registerHandler("keep.reading.char", new Handler<Message<String>>() {
-
-            @Override
-            public void handle(Message<String> message) {
-                bigData.setLength(0);
-                if (remaining != 0){
-                    bigData.append(text.substring(text.length()-remaining, text.length()-1));
-                }
-                try {
-                    //8377236 = 16MB
-                    for (int i=0; i<(size-remaining)/text.length(); i++){
-                        bigData.append(text);
-                    }
-                    bigData.append(text.substring(0, (size-remaining)%text.length()));
-                    remaining = text.length() - (size-remaining)%text.length();
-                    bus.send("splitData.address", bigData.toString()); // Holt sich einen Teil vom gesamten String
-                } catch (Exception e){
-                    int remainingChar = countData=-15;
-                    StringBuilder concatText = new StringBuilder();
-                    concatText.append(bigData.toString().substring(remainingChar, text.length() - 1));
-                    //concatText.append())
-                    String temp = bigData.toString().substring(--countData * 15, text.length()-1);
-                    bus.send("splitData.address", temp);
                 }
             }
         });
@@ -89,15 +72,15 @@ public class ReadText extends Verticle {
                 try {
                     //8377236 = 16MB
                     //hänge text als ganzes so lange an, bis die größe fast erreicht ist
-                    for (int i=0; i<(size-remaining)/text.length(); i++){
+                    for (int i=0; i<(packageSize-remaining)/text.length(); i++){
                         //pdf file should be read every time from new so that the program behaves like in the reality
                         readText();
                         bigData.append(text);
                     }
                     //errechne durch modulo wieviel text genau zu z.B. 8mb fehlen
                     readText();
-                    bigData.append(text.substring(0, (size-remaining)%text.length()));
-                    remaining = text.length() - (size-remaining)%text.length();
+                    bigData.append(text.substring(0, (packageSize-remaining)%text.length()));
+                    remaining = text.length() - (packageSize-remaining)%text.length();
                     //prüfe ob zufällig die letzen buchstaben ein wort abschließen
                     if (bigData.toString().charAt(bigData.length()-1) == ' '){
                         bus.send("splitData.address", bigData.toString());
@@ -134,12 +117,21 @@ public class ReadText extends Verticle {
         document.close();
         return text;
     }
+
+    //calculates how many packages has to be sent (abgerundet)
+    private void calculateRounds(){
+        rounds = wholeSize / packageSize;
+    }
+
     private void initialize(){
         bus = vertx.eventBus();
         log = container.logger();
         bigData = new StringBuilder();
-        size = container.config().getInteger("dataSize");
-        count = 0; // Anzahl wie oft eingelesen wird
+        count = 0;
+        wholeSize = container.config().getInteger("wholeSize");
+        packageSize = container.config().getInteger("packageSize");
         countData = 0; // Anzahl an Characters/words die eingelesen werden -> Davon hängt die Datengröße dann ab
+        rounds = 0;
+        remaining = 0;
     }
 }

@@ -26,13 +26,7 @@ public class CollectSend extends Verticle {
 
     @Override
     public void start(){
-
-        bus = vertx.eventBus();
-        log = container.logger();
-        arrayOfPorts = container.config().getArray("port_of_hosts");
-        sharedMap = vertx.sharedData().getMap("pingMap");
-        deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
-
+        initialize();
         //warte alle reply ping ab (1 Sekunde)
         vertx.setTimer(1000, new Handler<Long>() {
             @Override
@@ -71,8 +65,6 @@ public class CollectSend extends Verticle {
                                             @Override
                                             public void handle(AsyncResult<String> asyncResult) {
                                                 if (asyncResult.succeeded()) {
-                                                    deploymentMap.put(remoteAddress, asyncResult.result());
-                                                    //bus.send(remoteAddress, charBuffer);
                                                     bus.send(remoteAddress, charBuffer);
                                                     bus.send("start.reading.data", "continue reading");
                                                 }
@@ -93,16 +85,7 @@ public class CollectSend extends Verticle {
                 //}//if
             }//handle
         });
-        //TODO delete
-        /**bus.registerHandler("finish", new Handler<Message<String>>() {
-            @Override
-            public void handle(Message<String> message) {
-                try{
-                    container.undeployVerticle(deploymentMap.get(message.body()));
-                    deploymentMap.remove(message.body());
-                }catch(Exception e){}
-            }
-        });**/
+
         bus.registerHandler("splitData.finish", new Handler<Message<String>>() {
             @Override
             //
@@ -110,6 +93,14 @@ public class CollectSend extends Verticle {
                 System.out.println("Finish");
             }
         });
+    }
+
+    private void initialize(){
+        bus = vertx.eventBus();
+        log = container.logger();
+        arrayOfPorts = container.config().getArray("port_of_hosts");
+        sharedMap = vertx.sharedData().getMap("pingMap");
+        deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
     }
 
     private void setSharedMap(){

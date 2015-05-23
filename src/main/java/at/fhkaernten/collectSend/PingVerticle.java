@@ -28,13 +28,7 @@ public class PingVerticle extends Verticle{
     private ConcurrentMap<String, String> sharedMap;
     @Override
     public void start(){
-        log = container.logger();
-        bus = vertx.eventBus();
-        arrayOfPorts =  container.config().getArray("port_of_hosts");
-        sharedMap = vertx.sharedData().getMap("pingMap");
-        //initialize shared Map
-        setSharedMap();
-
+        initialize();
 
         vertx.setPeriodic(1000 * 5, new Handler<Long>() {
             @Override
@@ -57,7 +51,6 @@ public class PingVerticle extends Verticle{
                                 socket.dataHandler(new Handler<Buffer>() {
                                     @Override
                                     public void handle(Buffer buffer) { // Hier wird die Portnummer des freien Hosts ausgelesen
-                                        System.out.print(buffer.toString());
                                         for (Object obj : arrayOfPorts) {
                                             int portTmp = ((JsonObject) obj).getInteger("port");
                                             if (portTmp == Integer.valueOf(buffer.toString())) {
@@ -104,6 +97,14 @@ public class PingVerticle extends Verticle{
 
     }
 
+    private void initialize(){
+        log = container.logger();
+        bus = vertx.eventBus();
+        arrayOfPorts =  container.config().getArray("port_of_hosts");
+        sharedMap = vertx.sharedData().getMap("pingMap");
+        //initialize shared Map
+        setSharedMap();
+    }
 
     //overwrite shared map
     private void setSharedMap(){
