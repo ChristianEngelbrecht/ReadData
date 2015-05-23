@@ -23,8 +23,7 @@ public class CollectSend extends Verticle {
     private JsonArray arrayOfPorts;
     private ConcurrentMap<String, String> sharedMap;
     private Map<String, String> deploymentMap;
-    private String readTextAddress;
-    private int check = 0;
+
     @Override
     public void start(){
 
@@ -33,13 +32,6 @@ public class CollectSend extends Verticle {
         arrayOfPorts = container.config().getArray("port_of_hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
         deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
-
-        bus.registerHandler("initial.address", new Handler<Message<String>>() {
-                    @Override
-                    public void handle(Message<String> event) {
-                       readTextAddress = event.body();
-                    }
-         });
 
         //warte alle reply ping ab (1 Sekunde)
         vertx.setTimer(1000, new Handler<Long>() {
@@ -69,7 +61,7 @@ public class CollectSend extends Verticle {
                             final String remoteAddress = ((JsonObject)obj).getString("remoteAddress");
                             if (deploymentMap.get(remoteAddress) != null){
                                 bus.send(remoteAddress, charBuffer);
-                                bus.send(readTextAddress, "continue reading");
+                                bus.send("start.reading.data", "continue reading");
                             }else {
                                 container.deployWorkerVerticle("at.fhkaernten.collectSend.ReceiveData",
                                         new JsonObject("{\"port\":" + ((JsonObject) obj).getInteger("port") + "," +
@@ -82,7 +74,7 @@ public class CollectSend extends Verticle {
                                                     deploymentMap.put(remoteAddress, asyncResult.result());
                                                     //bus.send(remoteAddress, charBuffer);
                                                     bus.send(remoteAddress, charBuffer);
-                                                    bus.send(readTextAddress, "continue reading");
+                                                    bus.send("start.reading.data", "continue reading");
                                                 }
 
                                             } // handle
