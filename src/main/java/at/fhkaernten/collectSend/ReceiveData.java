@@ -42,7 +42,11 @@ public class ReceiveData extends Verticle {
                             socketToClose = event.result();
                             log.info("Connected to host " + host + " with " + portNumber + " and ready to send data.");
                             // Split string text from UUID and write UUID to log file (trace logging)
-                            container.logger().trace("sendData:" + message.body().split("#ID#")[1] );
+                            try{
+                                container.logger().trace("sendData:" + message.body().split("#ID#")[1] );
+                            }catch (Exception e){
+                                System.out.println(message.body());
+                            }
                             event.result().write(message.body() + "#SOURCE#" + remoteAddress + "#TIME#" + System.currentTimeMillis() + "#UUID#" + message.body().split("#ID#")[1] +  "#END#");
                             event.result().close();
                         }

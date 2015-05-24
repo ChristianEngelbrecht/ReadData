@@ -18,17 +18,17 @@ Die JSON Konfigurationsonsdateien finden sich im Resources Ordner mit equivalent
 public class Main extends Verticle {
     @Override
   public void start() {
-        deployVerticle("at.fhkaernten.source.ReadText"); // Hier wird die Methode deployVerticle aufgerufen
-        deployVerticle("at.fhkaernten.collectSend.PingVerticle");
-        deployWorkerVerticle("at.fhkaernten.collectSend.CollectSend");
+        deployWorkerVerticle("at.fhkaernten.source.ReadText", 1); // Hier wird die Methode deployVerticle aufgerufen
+        deployVerticle("at.fhkaernten.collectSend.PingVerticle", 1);
+        deployWorkerVerticle("at.fhkaernten.collectSend.CollectSend", 1);
     }
 
-    private void deployVerticle(final String classname) {
+    private void deployVerticle(final String classname, int numberOfThreads) {
         try {
             container.deployVerticle( //Container beinhaltet alle Threads in VertX
                     classname, // = "at.fhkaernten.source.ReadText" bzw. "at.fhkaernten.collectSend.CollectSend"
                     getConfigs(classname), // Hier wird die Methode getConfigs aufgerufen und die JSON Konfigurationsdatei zurückgegeben
-                    1, // Anzahl an gleichzeitigen Verticles
+                    numberOfThreads, // Anzahl an gleichzeitigen Verticles
                     new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
                         @Override
                         public void handle(AsyncResult<String> asyncResult) {
@@ -41,12 +41,15 @@ public class Main extends Verticle {
         }
     } // deployVerticle
 
-    private void deployWorkerVerticle(final String classname) {
+    private void deployWorkerVerticle(final String classname, int numberOfThreads) {
         try {
+            JsonObject config = getConfigs(classname);
+            config.putNumber("packageSize", container.config().getNumber("packageSize"));
+            config.putNumber("wholeSize", container.config().getNumber("wholeSize"));
             container.deployWorkerVerticle( //Container beinhaltet alle Threads in VertX
                     classname, // = "at.fhkaernten.source.ReadText" bzw. "at.fhkaernten.collectSend.CollectSend"
                     getConfigs(classname), // Hier wird die Methode getConfigs aufgerufen und die JSON Konfigurationsdatei zurückgegeben
-                    1, // Anzahl an gleichzeitigen Verticles
+                    numberOfThreads, // Anzahl an gleichzeitigen Verticles
                     false,
                     new AsyncResultHandler<String>() {
                         @Override
