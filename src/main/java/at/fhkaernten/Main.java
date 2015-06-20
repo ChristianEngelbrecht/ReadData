@@ -13,7 +13,7 @@ import java.io.InputStream;
 /*
 Aufruf von Main wird über die Datei mod.json deklariert -> Ist der Startpunkt des Programmes.
 In der Main Klasse werden die Verticles mit ihren JSON Konfigurationsdateien deployed.
-Die JSON Konfigurationsonsdateien finden sich im Resources Ordner mit equivalentem Dateinamen = Klassennamen
+Die JSON Konfigurationsdateien finden sich im Resources Ordner mit equivalentem Dateinamen = Klassennamen
  */
 public class Main extends Verticle {
     @Override

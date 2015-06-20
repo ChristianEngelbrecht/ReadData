@@ -51,7 +51,7 @@ public class CollectSend extends Verticle {
                         if (((JsonObject)obj).getBoolean("reachable")) {
                             check = false;
                             ((JsonObject)obj).putBoolean("reachable", false);
-                            setSharedMap();
+                            setSharedMap(); // aktualisiert Verfügbarkeitsinformation der MapReduce Workers
                             final String remoteAddress = ((JsonObject)obj).getString("remoteAddress");
                             if (deploymentMap.get(remoteAddress) != null){
                                 bus.send(remoteAddress, charBuffer);
@@ -60,6 +60,7 @@ public class CollectSend extends Verticle {
                                 container.deployWorkerVerticle("at.fhkaernten.collectSend.ReceiveData",
                                         new JsonObject("{\"port\":" + ((JsonObject) obj).getInteger("port") + "," +
                                                 "\"ip\":\"" + ((JsonObject) obj).getString("ip") + "\"," +
+                                                // RemoteAddress wird benötigt um Daten über den Bus zu senden und diese zuordnen zu können
                                                 "\"remoteAddress\":\"" + remoteAddress + "\"}"), 1, false,
                                         new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
                                             @Override

@@ -36,15 +36,15 @@ public class ReadText extends Verticle {
             public void handle(Message event) {
                 count ++;
                 if (count > rounds){
-                    bus.send("splitData.finish", "finish"); // Sendet finish an Adresse splitData.finish sobald der Text 120 mal eingelesen wurde
-                    container.logger().trace("end:finishing reading " + (wholeSize/packageSize)*packageSize);
+                    bus.send("splitData.finish", "finish"); // Sendet finish an Adresse splitData.finish sobald der Text eingelesen wurde
+                    container.logger().info("end:finishing reading " + (wholeSize/packageSize)*packageSize);
                     System.exit(0);
                 }
                 text = "";
                 try {
                     //unique identifier
                     final String uuid = UUID.randomUUID().toString();
-                    container.logger().trace("startReading:" + uuid);
+                    container.logger().info("startReading:" + uuid);
                     text = readText();
                     bus.send(container.config().getString("address"), uuid);
                     container.logger().info("Data has been processed");
@@ -90,9 +90,9 @@ public class ReadText extends Verticle {
                         while(true){
                             if (text.charAt(text.length()-remaining) == ' '){
                                 //concatinate uuid
-                                container.logger().trace("endReading:" + message.body());
+                                container.logger().info("endReading:" + message.body());
                                 bus.send("splitData.address", bigData.toString() + "#START##ID#" + message.body());
-                                log.trace("#ID#" + UUID.randomUUID().toString());
+                                log.info("#ID#" + UUID.randomUUID().toString());
                                 log.info("Size of bigData reached.");
                                 break;
 
@@ -128,8 +128,8 @@ public class ReadText extends Verticle {
         log = container.logger();
         bigData = new StringBuilder();
         count = 0;
-        wholeSize = container.config().getInteger("wholeSize");
-        packageSize = container.config().getInteger("packageSize");
+        wholeSize = container.config().getInteger("wholeSize"); // Hier wird die gesamte Größe von "Big Data" bestimmt
+        packageSize = container.config().getInteger("packageSize"); // Hier wird bestimmt, wie groß die einzelnen Pakete sind, welche zu den MapReduce Workern geschickt werden
         countData = 0; // Anzahl an Characters/words die eingelesen werden -> Davon hängt die Datengröße dann ab
         rounds = 0;
         remaining = 0;

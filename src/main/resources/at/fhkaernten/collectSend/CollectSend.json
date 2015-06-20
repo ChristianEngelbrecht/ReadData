@@ -12,7 +12,7 @@
       {
         "name":"host2",
         "port":2345,
-        "ip":"localhost",
+        "ip":"192.168.0.26",
         "reachable":false,
         "initialize":false,
         "remoteAddress":"host2"

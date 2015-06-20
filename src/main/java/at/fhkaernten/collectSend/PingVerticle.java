@@ -56,7 +56,7 @@ public class PingVerticle extends Verticle{
                                             if (portTmp == Integer.valueOf(buffer.toString())) {
                                                 ((JsonObject) obj).putBoolean("reachable", true);
                                                 setSharedMap();
-                                                log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
+                                                log.info(String.format("Ping %s @Port %s @ip %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port"), ((JsonObject) obj).getString("ip")));
                                                 socket.close();
                                                 break;
                                             }
