@@ -15,7 +15,7 @@ import org.vertx.java.platform.Verticle;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * Created by Christian on 12.04.2015.
+ * Class PingVerticle is used to check initially if MapReduce hosts are reachable and free to process data
  */
 public class PingVerticle extends Verticle{
     private Logger log;
@@ -24,33 +24,32 @@ public class PingVerticle extends Verticle{
     private JsonArray arrayOfPorts;
     private NetSocket socketToClose;
     private NetServer server;
-    //shared Data
+    /* ConcurrentMap is a sharedMap (function in Vert.x) which can be accessed by all verticle instances to exchange data */
     private ConcurrentMap<String, String> sharedMap;
+
     @Override
     public void start(){
         initialize();
-
         vertx.setPeriodic(1000 * 5, new Handler<Long>() {
             @Override
             public void handle(Long event) {
-                // Dieser NetServer pingt am Anfang alle Hosts.
+                // This NetClient is used to ping all available MapReduce hosts to check their availability
                 client = vertx.createNetClient();
                 for (Object host : arrayOfPorts) {
                     final int port = ((JsonObject) host).getInteger("port");
                     final String ip = ((JsonObject) host).getString("ip");
 
                     client.connect(port, ip , new AsyncResultHandler<NetSocket>() {
-                        //Event.Succeeded trifft dann zu, wenn sich der Client erfolgreich mit dem MapReduce Modul verbinden konnte
-                        // Erst wenn ein Event zutrifft, springt der Handler an und reagiert
-                        // Es trifft immer ein Event ein (false oder true) -> Bei true wird wieder ein neuer Socket mitgegeben!
+
                         @Override
                         public void handle(AsyncResult<NetSocket> event) {
                             if (event.succeeded()) {
                                 socketToClose = event.result();
                                 final NetSocket socket = event.result();
                                 socket.dataHandler(new Handler<Buffer>() {
+
                                     @Override
-                                    public void handle(Buffer buffer) { // Hier wird die Portnummer des freien Hosts ausgelesen
+                                    public void handle(Buffer buffer) {
                                         for (Object obj : arrayOfPorts) {
                                             int portTmp = ((JsonObject) obj).getInteger("port");
                                             if (portTmp == Integer.valueOf(buffer.toString())) {
@@ -63,7 +62,6 @@ public class PingVerticle extends Verticle{
                                         }
                                     }
                                 });
-                                // now send some data
                                 socket.write(new Buffer("ping"));
                             }
                         }
@@ -71,7 +69,7 @@ public class PingVerticle extends Verticle{
                 }
             }
         });
-
+        // This NetServer is responsible to receive replies from free (free = no operation) MapReduce hosts
         server = vertx.createNetServer();
         server.connectHandler(new Handler<NetSocket>() {
             @Override
@@ -85,7 +83,6 @@ public class PingVerticle extends Verticle{
                             if (portTmp == Integer.valueOf(buffer.toString())) {
                                 ((JsonObject) obj).putBoolean("reachable", true);
                                 setSharedMap();
-                                //log.info(String.format("Ping %s @Port %s was successful.", ((JsonObject) obj).getString("name"), ((JsonObject) obj).getInteger("port")));
                                 socket.close();
                                 break;
                             }
@@ -106,10 +103,9 @@ public class PingVerticle extends Verticle{
         setSharedMap();
     }
 
-    //overwrite shared map
     private void setSharedMap(){
-                for (Object obj : arrayOfPorts){
-                    String hostName = ((JsonObject) obj).getString("name");
+        for (Object obj : arrayOfPorts){
+            String hostName = ((JsonObject) obj).getString("name");
             sharedMap.put(hostName, ((JsonObject) obj).encode());
         }
     }
@@ -120,8 +116,6 @@ public class PingVerticle extends Verticle{
             try{
                 socketToClose.close();
             } catch (Exception e){}
-        } else {
-            log.info("Stopping ReduceSend-Verticle.");
         }
         try {
             try {
@@ -129,7 +123,7 @@ public class PingVerticle extends Verticle{
             }catch(Exception e){}
             client.close();
         } finally {
-            log.info("Stopping ReduceSend-Verticle.");
+            log.info("Stopping PingVerticle.");
         }
     }
 }

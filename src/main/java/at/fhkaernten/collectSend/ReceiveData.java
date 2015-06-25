@@ -13,7 +13,8 @@ import org.vertx.java.platform.Verticle;
 
 
 /**
- * Created by Christian on 25.04.2015.
+ *  This class is used to send data.
+ *  Will be deployed in CollectSend.java
  */
 public class ReceiveData extends Verticle {
 
@@ -33,9 +34,11 @@ public class ReceiveData extends Verticle {
 
         client = vertx.createNetClient();
         bus.registerHandler(remoteAddress, new Handler<Message<String>>() {
+
             @Override
             public void handle(final Message<String> message) {
                 client.connect(portNumber, ip , new Handler<AsyncResult<NetSocket>>() {
+
                     @Override
                     public void handle(AsyncResult<NetSocket> event) {
                         if (event.succeeded()) {
@@ -49,10 +52,11 @@ public class ReceiveData extends Verticle {
                             }
                             event.result().write(message.body() + "#SOURCE#" + remoteAddress + "#TIME#" + System.currentTimeMillis() + "#UUID#" + message.body().split("#ID#")[1] +  "#END#");
                             event.result().close();
-                        }
-                    }
+                            container.logger().info("sentData:" + message.body().split("#ID#")[1] );
+                        } // if
+                    } // handle
                 });
-            }
+            } // handle
         });
     }
 
@@ -74,8 +78,6 @@ public class ReceiveData extends Verticle {
             } catch (Exception e){
 
             }
-        } else {
-            log.info("Stopping ReceiveData-Verticle.");
         }
         try {
             client.close();

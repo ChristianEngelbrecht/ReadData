@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- *
+ * This class is used to send the produced data from ReadText to the free MapReduce hosts
  */
 public class CollectSend extends Verticle {
     private EventBus bus;
@@ -27,8 +27,8 @@ public class CollectSend extends Verticle {
     @Override
     public void start(){
         initialize();
-        //warte alle reply ping ab (1 Sekunde)
         vertx.setTimer(1000, new Handler<Long>() {
+
             @Override
             public void handle(Long event) {
                 bus.send("start.reading.data", "start");
@@ -36,60 +36,51 @@ public class CollectSend extends Verticle {
         });
 
         bus.registerHandler("splitData.address", new Handler<Message<String>>() {
+
             @Override
             public void handle(Message<String> message) {
-                // Hängt gesendete Character von ReadText an batchString an
-                //batchString.append(message.body()); // Body = <Character> in Zeile 64
-                //if (batchString.length() >= 160 / 2) {
                     final String charBuffer = message.body();
-                    //Start Timer
-                    //vertx.setPeriodic(1000 * 2, new Handler<Long>() {
-                    //@Override public void handle(Long event) {
                     getSharedMap();
                     boolean check = true;
                     for (Object obj : arrayOfPorts) {
                         if (((JsonObject)obj).getBoolean("reachable")) {
                             check = false;
                             ((JsonObject)obj).putBoolean("reachable", false);
-                            setSharedMap(); // aktualisiert Verfügbarkeitsinformation der MapReduce Workers
+                            setSharedMap();
                             final String remoteAddress = ((JsonObject)obj).getString("remoteAddress");
                             if (deploymentMap.get(remoteAddress) != null){
                                 bus.send(remoteAddress, charBuffer);
                                 bus.send("start.reading.data", "continue reading");
                             }else {
+                                // Deploy for each MapReduce host one ReceiveData verticle to send data
                                 container.deployWorkerVerticle("at.fhkaernten.collectSend.ReceiveData",
                                         new JsonObject("{\"port\":" + ((JsonObject) obj).getInteger("port") + "," +
                                                 "\"ip\":\"" + ((JsonObject) obj).getString("ip") + "\"," +
-                                                // RemoteAddress wird benötigt um Daten über den Bus zu senden und diese zuordnen zu können
+                                                // RemoteAddress is used as an identifier
                                                 "\"remoteAddress\":\"" + remoteAddress + "\"}"), 1, false,
-                                        new AsyncResultHandler<String>() { // Sobald ein Event passiert ist (Verticle deployed), springt das Programm hier hin
+                                        new AsyncResultHandler<String>() {
+
                                             @Override
                                             public void handle(AsyncResult<String> asyncResult) {
                                                 if (asyncResult.succeeded()) {
                                                     bus.send(remoteAddress, charBuffer);
                                                     bus.send("start.reading.data", "continue reading");
                                                 }
-
                                             } // handle
                                         });
-
                             }
-                            //writeToSocket(((JsonObject)obj).getInteger("port"), charBuffer);
                             break;
                         }
                     } //for
                     if (check){
                         bus.send("splitData.address", charBuffer);
                     }
-                    //}}); //timer
-
-                //}//if
             }//handle
         });
 
         bus.registerHandler("splitData.finish", new Handler<Message<String>>() {
+
             @Override
-            //
             public void handle(Message<String> message) {
                 System.out.println("Finish");
             }
@@ -101,7 +92,7 @@ public class CollectSend extends Verticle {
         log = container.logger();
         arrayOfPorts = container.config().getArray("port_of_hosts");
         sharedMap = vertx.sharedData().getMap("pingMap");
-        deploymentMap = new HashMap<>(); // HashMap welche die Remote Adresse und die Deployment ID des Verticles speichert - notwendig um Verticle zu schließen
+        deploymentMap = new HashMap<>();
     }
 
     private void setSharedMap(){
@@ -123,6 +114,5 @@ public class CollectSend extends Verticle {
             }
         }
     }
-
 }
 

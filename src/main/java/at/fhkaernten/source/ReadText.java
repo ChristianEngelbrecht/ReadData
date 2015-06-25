@@ -11,8 +11,7 @@ import org.vertx.java.platform.Verticle;
 import java.util.UUID;
 
 /**
- * Created by Christian on 03.03.2015.
- * Hier wird die PDF Datei zur weiteren Verarbeitung eingelesen
+ * Class ReadText is responsible to read PDF file and generate data packets
  */
 public class ReadText extends Verticle {
     private Logger log;
@@ -23,26 +22,27 @@ public class ReadText extends Verticle {
     int remaining;
     int count;
     int packageSize;
-    int wholeSize;
-    int rounds;
+    long wholeSize;
+    long rounds;
 
     @Override
     public void start(){
-        initialize(); // Initialisieren von Variablen
-        //calculate how many packages have to be sent to reach the whole data volume
+        initialize();
         calculateRounds();
         bus.registerHandler("start.reading.data", new Handler<Message>() {
+
             @Override
             public void handle(Message event) {
                 count ++;
+                System.out.println(count + " of " + rounds);
                 if (count > rounds){
-                    bus.send("splitData.finish", "finish"); // Sendet finish an Adresse splitData.finish sobald der Text eingelesen wurde
+                    bus.send("splitData.finish", "finish");
                     container.logger().info("end:finishing reading " + (wholeSize/packageSize)*packageSize);
-                    System.exit(0);
+                    stop();
                 }
                 text = "";
                 try {
-                    //unique identifier
+                    // Unique identifier of data package UUID
                     final String uuid = UUID.randomUUID().toString();
                     container.logger().info("startReading:" + uuid);
                     text = readText();
@@ -55,6 +55,7 @@ public class ReadText extends Verticle {
         });
 
         bus.registerHandler("keep.reading.words", new Handler<Message<String>>() {
+
             @Override
             public void handle(Message<String> message) {
                 text = text.replaceAll("[^\\w\\s]", "");
@@ -70,37 +71,32 @@ public class ReadText extends Verticle {
 
                 }
                 try {
-                    //8377236 = 16MB
-                    //hänge text als ganzes so lange an, bis die größe fast erreicht ist
                     for (int i=0; i<(packageSize-remaining)/text.length(); i++){
-                        //pdf file should be read every time from new so that the program behaves like in the reality
-                        //readText();
-                        bigData.append(text);
+                        // PDF file should be read every time from new so that the program behaves like in the reality - Has not been realized
+                        // because reading data took too long
+                        // readText();
+                        bigData.append(text + " ");
                     }
-                    //errechne durch modulo wieviel text genau zu z.B. 8mb fehlen
                     //readText();
                     bigData.append(text.substring(0, (packageSize-remaining)%text.length()));
                     remaining = text.length() - (packageSize-remaining)%text.length();
-                    //prüfe ob zufällig die letzen buchstaben ein wort abschließen
                     if (bigData.toString().charAt(bigData.length()-1) == ' '){
                         bus.send("splitData.address", bigData.toString() + "#START##ID#" + message.body());
                     } else {
                         --remaining;
-                        //hänge solange einen Buchstaben an, bis ein ganzes Wort bigData abschließt
                         while(true){
                             if (text.charAt(text.length()-remaining) == ' '){
-                                //concatinate uuid
+                                // Concatenate UUID
                                 container.logger().info("endReading:" + message.body());
                                 bus.send("splitData.address", bigData.toString() + "#START##ID#" + message.body());
                                 log.info("#ID#" + UUID.randomUUID().toString());
                                 log.info("Size of bigData reached.");
                                 break;
-
                             } else {
                                 bigData.append(text.charAt(text.length()-remaining));
                                 remaining--;
-                            }
-                        }
+                            } // if-else
+                        } // while
                     }
                 } catch (Exception e){
                     log.error(e);
@@ -110,17 +106,19 @@ public class ReadText extends Verticle {
     }
 
     public String readText() throws Exception{
-        PDDocument document = PDDocument.load(container.config().getString("documentPath")); // Hier wird die PDF Datei vom Pfad in die Variable document geladen. Der Pfad wird mittels Konfigurationsdatei definiert
-
-        PDFTextStripper stripper = new PDFTextStripper();  // Hilfsklasse der Klasse PDFTextStripper, welche das Einlesen der PDF durchführt
-        String text = stripper.getText(document); // Hier wird die Methode getText der Klasse PDFTextStripper aufgerufen welche den Text der Datei als String zurückgibt
+        PDDocument document = PDDocument.load(container.config().getString("documentPath"));
+        PDFTextStripper stripper = new PDFTextStripper();
+        String text = stripper.getText(document);
         document.close();
         return text;
     }
 
-    //calculates how many packages has to be sent (abgerundet)
+    /**
+     * Calculates how many packages must be send
+     */
     private void calculateRounds(){
         rounds = wholeSize / packageSize;
+        log.info("Number of rounds: " + rounds);
     }
 
     private void initialize(){
@@ -128,9 +126,11 @@ public class ReadText extends Verticle {
         log = container.logger();
         bigData = new StringBuilder();
         count = 0;
-        wholeSize = container.config().getInteger("wholeSize"); // Hier wird die gesamte Größe von "Big Data" bestimmt
-        packageSize = container.config().getInteger("packageSize"); // Hier wird bestimmt, wie groß die einzelnen Pakete sind, welche zu den MapReduce Workern geschickt werden
-        countData = 0; // Anzahl an Characters/words die eingelesen werden -> Davon hängt die Datengröße dann ab
+        wholeSize = container.config().getLong("wholeSize");
+        System.out.println("wholeSize " + wholeSize);
+        packageSize = container.config().getInteger("packageSize");
+        System.out.println("packageSize " + packageSize);
+        countData = 0;
         rounds = 0;
         remaining = 0;
     }

@@ -4,26 +4,34 @@
       {
         "name":"host1",
         "port":1234,
-        "ip":"localhost",
+        "ip":"192.168.0.2",
         "reachable":false,
         "initialize":false,
         "remoteAddress":"host1"
       },
       {
         "name":"host2",
-        "port":2345,
-        "ip":"192.168.0.26",
+        "port":1324,
+        "ip":"192.168.0.3",
         "reachable":false,
         "initialize":false,
         "remoteAddress":"host2"
       },
       {
-        "name":"host3",
-        "port":3456,
-        "ip":"localhost",
+        "name":"host4",
+        "port":1432,
+        "ip":"192.168.0.5",
         "reachable":false,
         "initialize":false,
-        "remoteAddress":"host3"
+        "remoteAddress":"host4"
+      },
+      {
+        "name":"host5",
+        "port":2345,
+        "ip":"192.168.0.6",
+        "reachable":false,
+        "initialize":false,
+        "remoteAddress":"host5"
       }
     ]
   }
